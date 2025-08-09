@@ -1,0 +1,20 @@
+{
+  "name": "sigorta-karsilastirma",
+  "version": "1.0.0",
+  "description": "Kasko Sigorta Poliçesi Karşılaştırma Platformu",
+  "private": true,
+  "scripts": {
+    "build": "echo 'No build required'"
+  },
+  "dependencies": {
+    "formidable": "^3.5.1",
+    "openai": "^4.104.0",
+    "pdf-parse": "^1.1.1"
+  },
+  "devDependencies": {
+    "vercel": "^32.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
