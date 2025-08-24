@@ -82,7 +82,6 @@ html.light-theme .theme-toggle-btn .sun-icon { display: none; } html.light-theme
 .question-nav { display: flex; justify-content: space-between; margin-top: var(--spacing-xl); border-top: 1px solid var(--border-color); padding-top: var(--spacing-xl); }
 #prev-btn { visibility: hidden; }
 
-/* ... (Remaining styles are the same as previous version) ... */
 #upload-view { justify-content: center; align-items: center; padding: var(--spacing-xl) 0; overflow-y: auto; }
 #upload-view .container { position: relative; }
 .hero-header { text-align: center; margin-bottom: var(--spacing-2xl); }
@@ -166,12 +165,38 @@ html.light-theme .results-header-sticky { background: rgba(248, 250, 252, 0.8); 
 .ai-commentary p:last-child { margin-bottom: 0; }
 .table-wrapper { overflow-x: auto; }
 .comparison-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 0.95rem; }
-.comparison-table th, .comparison-table td { padding: var(--spacing-md); text-align: left; border-bottom: 1px solid var(--border-color); }
-.comparison-table thead th { position: sticky; top: 0; background: var(--bg-secondary); color: var(--text-primary); font-weight: 600; }
+.comparison-table th, .comparison-table td { 
+    padding: var(--spacing-md); 
+    text-align: left; 
+    border-bottom: 1px solid var(--border-color);
+}
+.comparison-table thead th { 
+    position: sticky; 
+    top: 0; 
+    background: var(--bg-secondary); 
+    color: var(--text-primary); 
+    font-weight: 600; 
+}
 html.light-theme .comparison-table thead th { background: var(--surface-hover); }
-.comparison-table tbody tr { transition: background-color var(--transition-fast); }
-.comparison-table tbody tr:hover { background-color: var(--surface-hover); }
-.comparison-table td:first-child { font-weight: 500; color: var(--text-secondary); }
+
+/* --- YENİ VE DÜZELTİLMİŞ KOD BAŞLANGICI --- */
+.comparison-table tbody tr {
+    transition: background-color var(--transition-fast);
+    color: var(--text-primary); /* Metin rengini tema değişkeninden almasını sağla */
+}
+/* Zebra şeridi ekleyerek AI'ın eklediği arka planları ez */
+.comparison-table tbody tr:nth-child(even) {
+    background-color: var(--bg-secondary); /* Çift satırları farklı bir renge boya */
+}
+.comparison-table tbody tr:hover {
+    background-color: var(--surface-hover); /* Vurgu rengini koru */
+}
+/* --- YENİ VE DÜZELTİLMİŞ KOD SONU --- */
+
+.comparison-table td:first-child { 
+    font-weight: 500; 
+    color: var(--text-secondary); 
+}
 .share-section { margin-top: var(--spacing-xl); text-align: center; padding: var(--spacing-lg); background: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--border-radius-lg); }
 .share-text { margin: 0 0 var(--spacing-md) 0; color: var(--text-secondary); }
 .share-buttons { display: flex; justify-content: center; gap: var(--spacing-md); }
