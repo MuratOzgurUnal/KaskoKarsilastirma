@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Kasko sigortası poliçelerinizi karşılaştırın, AI destekli analiz ile en iyi teklifi bulun">
+    <meta name="author" content="Murat Özgür Ünal">
+    <title>Sigorta Karşılaştırma | En İyi Kasko Teklifini Bulun</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+    
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='50%' x='50%' text-anchor='middle' font-size='80'>🛡️</text></svg>">
+</head>
+<body>
+    <div id="app">
+        <!-- Global Theme Toggle Button -->
+        <button class="theme-toggle-btn" title="Temayı Değiştir">
+            <svg class="sun-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>
+            <svg class="moon-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+        </button>
+
+        <!-- Questionnaire View -->
+        <div id="questionnaire-view" class="view active">
+            <div class="questionnaire-container">
+                <div class="progress-bar-container">
+                    <div class="progress-bar-fill"></div>
+                </div>
+
+                <div class="question-content-wrapper">
+                    <div class="question-content">
+                        <!-- Step 1: Araç Kullanım Amacı -->
+                        <div class="question-step active" data-step="0">
+                            <h2>Araç Kullanım Amacı Nedir?</h2>
+                            <div class="options-list single-choice">
+                                <label><input type="radio" name="usage" value="şahsi"><div class="option-card"><div class="option-icon">🚗</div><span class="option-text">Şahsi</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="radio" name="usage" value="ticari"><div class="option-card"><div class="option-icon">🚚</div><span class="option-text">Ticari</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="radio" name="usage" value="kiralama"><div class="option-card"><div class="option-icon">🔑</div><span class="option-text">Kiralama</span><div class="checkmark-icon"></div></div></label>
+                            </div>
+                        </div>
+
+                        <!-- Step 2: Öncelik (ÇOKLU SEÇİM) -->
+                        <div class="question-step" data-step="1">
+                            <h2>Karşılaştırmada Öncelik Nedir?</h2>
+                            <p class="question-subtitle">(Birden fazla seçebilirsiniz)</p>
+                            <div class="options-list multi-choice">
+                                <label><input type="checkbox" name="priority" value="fiyat"><div class="option-card"><div class="option-icon">💰</div><span class="option-text">En Uygun Fiyat</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="checkbox" name="priority" value="kapsam"><div class="option-card"><div class="option-icon">🛡️</div><span class="option-text">En Geniş Kapsam</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="checkbox" name="priority" value="ek-hizmetler"><div class="option-card"><div class="option-icon">✨</div><span class="option-text">Ek Hizmetler</span><div class="checkmark-icon"></div></div></label>
+                            </div>
+                        </div>
+
+                        <!-- Step 3: Ek Teminatlar -->
+                        <div class="question-step" data-step="2">
+                            <h2>Hangi Ek Teminatlar Önemli?</h2>
+                            <p class="question-subtitle">(Birden fazla seçebilirsiniz)</p>
+                            <div class="options-list multi-choice">
+                                <label><input type="checkbox" name="extras" value="imm"><div class="option-card"><div class="option-icon">💥</div><span class="option-text">İMM Yüksekliği</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="checkbox" name="extras" value="yeni-deger"><div class="option-card"><div class="option-icon">💎</div><span class="option-text">Yeni Değer Klozu</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="checkbox" name="extras" value="mini-onarim"><div class="option-card"><div class="option-icon">🔧</div><span class="option-text">Mini Onarım</span><div class="checkmark-icon"></div></div></label>
+                                <label><input type="checkbox" name="extras" value="ikame-arac"><div class="option-card"><div class="option-icon">🔄</div><span class="option-text">İkame Araç</span><div class="checkmark-icon"></div></div></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="question-nav">
+                    <button id="prev-btn" class="btn btn-secondary">Geri</button>
+                    <button id="next-btn" class="btn btn-primary" disabled>İleri</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upload View -->
+        <div id="upload-view" class="view">
+            <div class="container">
+                <header class="hero-header">
+                    <div class="logo-section">
+                        <span class="logo-icon">🛡️</span>
+                        <h1 class="logo-text">Sigorta<span class="gradient-text">Karşılaştır</span></h1>
+                    </div>
+                    <p class="hero-subtitle">Kasko poliçelerinizi <span class="highlight">yapay zeka</span> ile analiz edin,<br>en avantajlı teklifi <span class="highlight">saniyeler içinde</span> bulun.</p>
+                </header>
+                <div class="upload-section-wrapper">
+                    <div class="upload-section">
+                        <div class="upload-box" id="upload-box">
+                            <input type="file" id="file-input" multiple accept=".pdf" hidden>
+                            <label for="file-input" class="upload-label">
+                                <div class="upload-icon"><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 10l5-5m0 0l5 5m-5-5v12" stroke-linecap="round" stroke-linejoin="round"/><path d="M20 17v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+                                <h3 class="upload-title">PDF Poliçelerinizi Yükleyin</h3>
+                                <p class="upload-text">Dosyaları sürükleyip bırakın veya <span class="text-primary">seçmek için tıklayın</span></p>
+                                <span class="upload-hint">Maksimum dosya boyutu: 50MB</span>
+                            </label>
+                        </div>
+                        <div id="file-list" class="file-list"></div>
+                        <button id="analyze-btn" class="btn btn-primary btn-large" disabled><span class="btn-text">En Az 2 Poliçe Yükleyin</span></button>
+                    </div>
+                    <div class="info-section">
+                        <div class="info-item"><span class="info-icon">🤖</span> AI Destekli Analiz</div>
+                        <div class="info-item"><span class="info-icon">⚡</span> Hızlı Sonuç</div>
+                        <div class="info-item"><span class="info-icon">🔒</span> Güvenli İşlem</div>
+                    </div>
+                </div>
+            </div>
+            <footer class="footer"><p>Created by <strong>Murat Özgür Ünal</strong></p></footer>
+        </div>
+
+        <!-- Results View -->
+        <div id="results-view" class="view">
+            <header class="results-header-sticky">
+                <div class="results-actions-container">
+                    <div class="back-btn-wrapper"><button id="back-btn" class="btn btn-secondary"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5m0 0l7 7m-7-7l7-7" stroke-linecap="round" stroke-linejoin="round"/></svg><span>Yeni Analiz</span></button></div>
+                    <div class="action-buttons-group">
+                        <button id="copy-btn" class="btn btn-secondary"><span class="btn-icon">📋</span><span class="btn-text">Tümünü Kopyala</span></button>
+                        <button id="new-analysis-btn" class="btn btn-primary"><span class="btn-icon">🔄</span><span class="btn-text">Yeni Karşılaştırma</span></button>
+                    </div>
+                </div>
+            </header>
+            <div class="results-container">
+                <div id="loader" class="loader hidden"><div class="loader-spinner"></div><h3 class="loader-title">Poliçeleriniz Analiz Ediliyor</h3><p class="loader-text">AI modelimiz detaylı karşılaştırma yapıyor...</p><div class="loader-progress"><div class="progress-bar"></div></div></div>
+                <div id="results-content" class="results-content hidden">
+                    <div class="results-intro"><h2 class="results-title"><span class="title-icon">✨</span>Analiz Tamamlandı</h2><p class="results-subtitle"><span id="file-count">2</span> poliçe başarıyla karşılaştırıldı</p></div>
+                    <div class="result-card"><div class="card-header"><h3 class="card-title"><span class="card-icon">🎯</span> Uzman Analizi ve Tavsiye</h3><span class="badge badge-premium">AI Powered</span></div><div class="card-body"><div id="ai-commentary" class="ai-commentary"></div></div></div>
+                    <div class="result-card"><div class="card-header"><h3 class="card-title"><span class="card-icon">📊</span> Detaylı Karşılaştırma Tablosu</h3></div><div class="card-body"><div class="table-wrapper"><table id="comparison-table" class="comparison-table"></table></div></div></div>
+                    <div class="share-section">
+                        <p class="share-text">Bu analizi paylaşın:</p>
+                        <div class="share-buttons"><button class="share-btn whatsapp" title="WhatsApp'ta Paylaş"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.149-.67.149-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414-.074-.123-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg></button><button class="share-btn email" title="E-posta ile Gönder"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg></button><button class="share-btn telegram" title="Telegram'da Paylaş"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.161l-1.908 9c-.142.633-.514.788-1.041.49l-2.907-2.142-1.402 1.349c-.155.155-.285.285-.584.285l.209-2.968 5.393-4.875c.235-.209-.051-.326-.365-.117l-6.664 4.197-2.875-.899c-.625-.195-.637-.625.13-.926l11.236-4.327c.521-.194 1.006.131.778.933z"/></svg></button></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div id="toast-container" class="toast-container"></div>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
