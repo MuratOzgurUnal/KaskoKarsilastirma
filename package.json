@@ -7,7 +7,9 @@
     "build": "echo 'No build required'"
   },
   "dependencies": {
-    "@google/generative-ai": "^0.24.1",
+    "@google-cloud/vertexai": "^1.10.0",
+    "dotenv": "^17.2.1",
+    "find-config": "^1.0.0",
     "formidable": "^3.5.1",
     "pdf-parse": "^1.1.1"
   },

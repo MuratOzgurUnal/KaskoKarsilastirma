@@ -1,16 +1,47 @@
-// api/analyze.js - Vercel Serverless Function (STABİL MODELE DÖNÜLDÜ VE PROMPT GÜVENLİ HALE GETİRİLDİ)
+// api/analyze.js - VERCEL SERVERLESS FUNCTION (VERTEX AI'A GEÇİLDİ VE ENV OKUMA GARANTİLENDİ)
 const { formidable } = require('formidable');
 const fs = require('fs').promises;
 const pdf = require('pdf-parse');
-const { GoogleGenerativeAI } = require("@google/generative-ai");
+const { VertexAI } = require('@google-cloud/vertexai');
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+// --- YENİ KOD BURADA BAŞLIYOR ---
+// Bu satır, .env.local dosyasını bulup okumasını SAĞLAR
+require('dotenv').config({ path: require('find-config')('.env.local') });
 
-// --- ÇÖZÜM 1: En stabil ve güçlü modele geri dönüyoruz. ---
-const AI_MODEL = "gemini-2.5-pro"; 
+// Proje Ayarlarını Tanımlıyoruz
+const AI_MODEL_NAME = "gemini-1.5-pro-latest";
+const PROJECT_ID = process.env.GCP_PROJECT_ID; 
+const LOCATION = process.env.GCP_LOCATION || 'us-central1';
 const MAX_TEXT_LENGTH = 15000;
 
+// Hata kontrolü ekliyoruz
+if (!PROJECT_ID) {
+    throw new Error("GCP_PROJECT_ID ortam değişkeni bulunamadı. Lütfen .env.local dosyasını ve içeriğini kontrol edin.");
+}
+
+// Vertex AI'ı başlat
+const vertex_ai = new VertexAI({ 
+    project: PROJECT_ID, 
+    location: LOCATION,
+    // Kimlik bilgilerini doğrudan sağlıyoruz
+    credentials: {
+        client_email: process.env.GCP_CLIENT_EMAIL,
+        private_key: process.env.GCP_PRIVATE_KEY.replace(/\\n/g, '\n') // \n karakterlerini düzeltiyoruz
+    }
+});
+
+const model = vertex_ai.getGenerativeModel({
+  model: AI_MODEL_NAME,
+  generationConfig: {
+    responseMimeType: "application/json",
+  },
+});
+// --- YENİ KOD BURADA BİTİYOR ---
+
+
+
 async function handler(req, res) {
+  // CORS ayarları (değişiklik yok)
   res.setHeader('Access-Control-Allow-Credentials', true);
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,POST');
@@ -30,21 +61,16 @@ async function handler(req, res) {
     
     const prompt = createComparisonPrompt(policyTexts, uploadedFileNames, userPreferences);
     
-    console.log(`Calling Google Gemini API with ${AI_MODEL} model...`);
+    console.log(`Calling Vertex AI with ${AI_MODEL_NAME} model...`);
     
-    const model = genAI.getGenerativeModel({ 
-        model: AI_MODEL,
-        generationConfig: {
-            responseMimeType: "application/json",
-        }
-    });
-
+    // --- DEĞİŞİKLİK 3: API Çağrısını Vertex AI formatına güncelliyoruz ---
     const result = await model.generateContent(prompt);
-    const response = await result.response;
-    let content = response.text();
+    // Vertex AI'da response yapısı biraz farklı olabilir, doğrudan text'e ulaşalım
+    const content = result.response.candidates[0].content.parts[0].text;
 
     console.log('API Response received.');
 
+    // JSON parse ve hata yönetimi (değişiklik yok)
     let jsonResult;
     try {
       jsonResult = JSON.parse(content);
@@ -84,8 +110,9 @@ async function handler(req, res) {
   } catch (error) {
     console.error('API Error:', error);
     let errorMessage = 'Analiz sırasında sunucuda bir hata oluştu.';
+    // Hata mesajları (değişiklik yok)
     if (error.message && (error.message.includes('404') || error.message.toLowerCase().includes('model not found'))) {
-        errorMessage = `Model "${AI_MODEL}" bulunamadı. Lütfen API anahtarınızın bu modele erişimi olduğundan emin olun.`;
+        errorMessage = `Model "${AI_MODEL_NAME}" bulunamadı veya projenizin bu modele erişimi yok.`;
     } else if (error.message && error.message.includes('429')) {
         errorMessage = 'Servis yoğun (API kullanım limiti aşıldı). Lütfen birkaç dakika bekleyip tekrar deneyin.';
     } else if (error.message) {
@@ -95,121 +122,126 @@ async function handler(req, res) {
   }
 }
 
+// parseRequest ve createComparisonPrompt fonksiyonları aynı kalabilir.
+// Değişiklik yapmanıza gerek yok.
+
 async function parseRequest(req) {
-  const form = formidable({ uploadDir: '/tmp', keepExtensions: true, maxFileSize: 50 * 1024 * 1024, multiples: true });
-  const [fields, files] = await form.parse(req);
-  const uploadedFiles = Array.isArray(files.files) ? files.files : [files.files || []].flat();
+    const form = formidable({ uploadDir: '/tmp', keepExtensions: true, maxFileSize: 50 * 1024 * 1024, multiples: true });
+    const [fields, files] = await form.parse(req);
+    const uploadedFiles = Array.isArray(files.files) ? files.files : [files.files || []].flat();
+    
+    let userPreferences = {};
+    const preferencesField = Array.isArray(fields.preferences) ? fields.preferences[0] : fields.preferences;
+    if (preferencesField && typeof preferencesField === 'string') {
+        try {
+          userPreferences = JSON.parse(preferencesField);
+        } catch (e) { console.error("Could not parse user preferences:", e); }
+    }
   
-  let userPreferences = {};
-  const preferencesField = Array.isArray(fields.preferences) ? fields.preferences[0] : fields.preferences;
-  if (preferencesField && typeof preferencesField === 'string') {
+    if (uploadedFiles.length === 0) throw new Error('Dosya yüklenmedi.');
+  
+    const policyTexts = [];
+    const uploadedFileNames = [];
+  
+    for (const file of uploadedFiles) {
+      if (!file || !file.filepath) continue;
+      const filePath = file.filepath;
       try {
-        userPreferences = JSON.parse(preferencesField);
-      } catch (e) { console.error("Could not parse user preferences:", e); }
-  }
-
-  if (uploadedFiles.length === 0) throw new Error('Dosya yüklenmedi.');
-
-  const policyTexts = [];
-  const uploadedFileNames = [];
-
-  for (const file of uploadedFiles) {
-    if (!file || !file.filepath) continue;
-    const filePath = file.filepath;
-    try {
-      const dataBuffer = await fs.readFile(filePath);
-      const pdfData = await pdf(dataBuffer);
-      const text = pdfData.text ? pdfData.text.trim() : '';
-      if (text.length > 100) {
-        policyTexts.push(text.substring(0, MAX_TEXT_LENGTH));
-        uploadedFileNames.push(file.originalFilename || `Poliçe ${policyTexts.length}`);
+        const dataBuffer = await fs.readFile(filePath);
+        const pdfData = await pdf(dataBuffer);
+        const text = pdfData.text ? pdfData.text.trim() : '';
+        if (text.length > 100) {
+          policyTexts.push(text.substring(0, MAX_TEXT_LENGTH));
+          uploadedFileNames.push(file.originalFilename || `Poliçe ${policyTexts.length}`);
+        }
+      } catch (error) {
+        console.error(`Error processing file ${file.originalFilename}:`, error.message);
+      } finally {
+        if (filePath) await fs.unlink(filePath).catch(e => console.error(`Failed to delete temp file ${filePath}:`, e));
       }
-    } catch (error) {
-      console.error(`Error processing file ${file.originalFilename}:`, error.message);
-    } finally {
-      if (filePath) await fs.unlink(filePath).catch(e => console.error(`Failed to delete temp file ${filePath}:`, e));
     }
+    return { policyTexts, uploadedFileNames, userPreferences };
   }
-  return { policyTexts, uploadedFileNames, userPreferences };
-}
-
-function createComparisonPrompt(policies, fileNames, userPreferences) {
-  let allianzPolicyIndex = -1;
-  policies.forEach((p, i) => {
-    if (['allianz', 'allianz sigorta'].some(k => p.toLowerCase().includes(k))) {
-      allianzPolicyIndex = i;
-    }
-  });
-
-  let policyBlocks = '';
-  policies.forEach((p, i) => {
-    policyBlocks += `\n--- POLIÇE ${i + 1} (${fileNames[i]}) ---\n${p}\n--- END OF POLIÇE ${i + 1} ---\n`;
-  });
   
-  const preferencesText = JSON.stringify(userPreferences, null, 2);
+  function createComparisonPrompt(policies, fileNames, userPreferences) {
+    // Bu fonksiyon aynı kalıyor, çünkü prompt'un içeriği değişmiyor.
+    let allianzPolicyIndex = -1;
+    policies.forEach((p, i) => {
+      if (['allianz', 'allianz sigorta'].some(k => p.toLowerCase().includes(k))) {
+        allianzPolicyIndex = i;
+      }
+    });
+  
+    let policyBlocks = '';
+    policies.forEach((p, i) => {
+      policyBlocks += `\n--- POLIÇE ${i + 1} (${fileNames[i]}) ---\n${p}\n--- END OF POLIÇE ${i + 1} ---\n`;
+    });
+    
+    const preferencesText = JSON.stringify(userPreferences, null, 2);
+  
+    const baseInstructions = `
+  Sen Türkiye kasko sigortaları konusunda uzman, verilen talimatları harfiyen ve istisnasız bir şekilde uygulayan bir finansal risk analistisin. Cevabını SADECE ve HER ZAMAN aşağıdaki JSON şemasına uygun, geçerli bir JSON nesnesi olarak ver:
+  {
+    "aiCommentary": "Basit metin formatında, uzman yorumu.",
+    "tableHtml": "HTML formatında, EKSİKSİZ karşılaştırma tablosu."
+  }
+  `;
+  
+    const allianzInstructions = `
+  ÖZEL TALİMAT: ALLIANZ POLİÇESİ (Poliçe ${allianzPolicyIndex + 1}) TESPİT EDİLDİ. Bu talimatlar en yüksek önceliğe sahiptir.
+  
+  ---
+  **GÖREV 1: MUTLAK DERECEDE EKSİKSİZ KARŞILAŞTIMA TABLOSU (\`tableHtml\`)**
+  Bu görevdeki tek kural MUTLAK BÜTÜNLÜKTÜR.
+  1.  **HİÇBİR ŞEYİ ATLAMAYACAKSIN:** Poliçelerde geçen en küçük detaydan en büyük teminata kadar HER ŞEYİ, istisnasız bir şekilde tabloya ekle.
+  2.  **YASAK:** ÖZETLEME YAPMA. KISALTMA YAPMA. YORUMLAMA YAPMA. Sadece veriyi olduğu gibi tabloya aktar.
+  3.  **Standart Kurallar:** Allianz'ın üstün olduğu değerleri yeşil ve kalın yap (\`<strong><span style="color: #10B981;">...</span></strong>\`). Allianz sütun başlığını "Poliçe ${allianzPolicyIndex + 1} - Allianz (Tavsiye Edilen)" olarak değiştir.
+  
+  ---
+  **GÖREV 2: KESİN KOŞULLU YORUM (\`aiCommentary\`)**
+  BU GÖREVDEKİ KURALLAR TARTIŞMAYA AÇIK DEĞİLDİR VE HARFİYEN UYGULANMALIDIR.
+  
+  **MUTLAK VE TARTIŞILMAZ ANA KURAL:** Yorum bölümünde, Allianz'ın avantajlı olmadığı HİÇBİR konu hakkında TEK BİR KELİME BİLE yazmayacaksın. Eğer Allianz bir konuda rakibe göre daha iyi değilse, o konuyu TAMAMEN YOK SAYACAKSIN. Rakibin üstün olduğu veya Allianz'ın zayıf olduğu konulara değinmek KESİNLİKLE YASAKTIR.
+  
+  **İŞ AKIŞIN:**
+  Aşağıdaki "Zorunlu Kontrol Listesi"ndeki HER BİR MADDE için şu mantığı harfiyen uygula:
+  
+  1.  **KONTROL ET:** Allianz'ın teminatı/limiti rakip poliçeden **AÇIKÇA VE MATEMATİKSEL OLARAK DAHA İYİ Mİ?**
+  2.  **KARAR VER:**
+      -   **EVET, DAHA İYİ İSE:** O teminat için, aşağıdaki İKİ BÖLÜMLÜ formata uygun bir metin oluştur:
+          ## [TEMİNAT ADI]
+          Allianz'ın Avantajı: [İki poliçe arasındaki farkı, poliçelerdeki gerçek rakamları kullanarak net bir şekilde kanıtlayan 1-2 cümle.]
+          Senaryo: [Bu farkın kritik olduğu, o teminata özel, somut ve rakamlarla desteklenmiş gerçekçi bir kaza/olay senaryosu.]
+          \n\n---\n\n
+      -   **HAYIR, DAHA İYİ DEĞİLSE:** O MADDEYİ TAMAMEN ATLA ve HİÇBİR ŞEY YAZMA.
+  
+  **EN ÖNEMLİ FORMAT KURALLARI:**
+  - Çıktın BASİT METİN (plain text) olacak. ASLA HTML etiketleri kullanma.
+  - KESİNLİKLE emoji, ikon veya benzeri özel karakterler kullanma.
+  - Yaratıcı veya süslü başlıklar KESİNLİKLE YASAKTIR. Sadece \`## Teminat Adı\` formatını kullan.
+  
+  **ZORUNLU KONTROL LİSTESİ:**
+  - İMM
+  - Yeni Değer Klozu
+  - İkame Araç
+  - Anahtar Kaybı
+  - Doğal Afetler
+  - Mini Onarım
+  - Manevi Tazminat
+  ---
+  `;
+  
+    const noAllianzInstructions = `
+  TALİMAT: ALLIANZ TESPİT EDİLMEDİ.
+  1.  **GÖREV 1 (\`tableHtml\`):** Poliçelerde yazan İSTİSNASIZ HER DETAYI içeren, %100 EKSİKSİZ bir karşılaştırma tablosu oluştur. ASLA özetleme yapma.
+  2.  **GÖREV 2 (\`aiCommentary\`):** Kullanıcının tercihlerini (${preferencesText}) dikkate alarak, her iki poliçenin de güçlü ve zayıf yönlerini özetleyen dengeli ve tarafsız bir analiz yap. Yorumunda ASLA HTML etiketleri kullanma.
+  `;
+  
+    const finalInstructions = allianzPolicyIndex !== -1 ? allianzInstructions : noAllianzInstructions;
+  
+    return `${baseInstructions}${finalInstructions}\n\nKullanıcının tercihleri şunlar:\n${preferencesText}\n\nAnalizini aşağıdaki poliçe metinlerine göre yap:${policyBlocks}`;
+  }
 
-  const baseInstructions = `
-Sen Türkiye kasko sigortaları konusunda uzman, verilen talimatları harfiyen ve istisnasız bir şekilde uygulayan bir finansal risk analistisin. Cevabını SADECE ve HER ZAMAN aşağıdaki JSON şemasına uygun, geçerli bir JSON nesnesi olarak ver:
-{
-  "aiCommentary": "Basit metin formatında, uzman yorumu.",
-  "tableHtml": "HTML formatında, EKSİKSİZ karşılaştırma tablosu."
-}
-`;
-
-  const allianzInstructions = `
-ÖZEL TALİMAT: ALLIANZ POLİÇESİ (Poliçe ${allianzPolicyIndex + 1}) TESPİT EDİLDİ. Bu talimatlar en yüksek önceliğe sahiptir.
-
----
-**GÖREV 1: MUTLAK DERECEDE EKSİKSİZ KARŞILAŞTIRMA TABLOSU (\`tableHtml\`)**
-Bu görevdeki tek kural MUTLAK BÜTÜNLÜKTÜR.
-1.  **HİÇBİR ŞEYİ ATLAMAYACAKSIN:** Poliçelerde geçen en küçük detaydan en büyük teminata kadar HER ŞEYİ, istisnasız bir şekilde tabloya ekle.
-2.  **YASAK:** ÖZETLEME YAPMA. KISALTMA YAPMA. YORUMLAMA YAPMA. Sadece veriyi olduğu gibi tabloya aktar.
-3.  **Standart Kurallar:** Allianz'ın üstün olduğu değerleri yeşil ve kalın yap (\`<strong><span style="color: #10B981;">...</span></strong>\`). Allianz sütun başlığını "Poliçe ${allianzPolicyIndex + 1} - Allianz (Tavsiye Edilen)" olarak değiştir.
-
----
-**GÖREV 2: KESİN KOŞULLU YORUM (\`aiCommentary\`)**
-BU GÖREVDEKİ KURALLAR TARTIŞMAYA AÇIK DEĞİLDİR VE HARFİYEN UYGULANMALIDIR.
-
-**MUTLAK VE TARTIŞILMAZ ANA KURAL:** Yorum bölümünde, Allianz'ın avantajlı olmadığı HİÇBİR konu hakkında TEK BİR KELİME BİLE yazmayacaksın. Eğer Allianz bir konuda rakibe göre daha iyi değilse, o konuyu TAMAMEN YOK SAYACAKSIN. Rakibin üstün olduğu veya Allianz'ın zayıf olduğu konulara değinmek KESİNLİKLE YASAKTIR.
-
-**İŞ AKIŞIN:**
-Aşağıdaki "Zorunlu Kontrol Listesi"ndeki HER BİR MADDE için şu mantığı harfiyen uygula:
-
-1.  **KONTROL ET:** Allianz'ın teminatı/limiti rakip poliçeden **AÇIKÇA VE MATEMATİKSEL OLARAK DAHA İYİ Mİ?**
-2.  **KARAR VER:**
-    -   **EVET, DAHA İYİ İSE:** O teminat için, aşağıdaki İKİ BÖLÜMLÜ formata uygun bir metin oluştur:
-        ## [TEMİNAT ADI]
-        Allianz'ın Avantajı: [İki poliçe arasındaki farkı, poliçelerdeki gerçek rakamları kullanarak net bir şekilde kanıtlayan 1-2 cümle.]
-        Senaryo: [Bu farkın kritik olduğu, o teminata özel, somut ve rakamlarla desteklenmiş gerçekçi bir kaza/olay senaryosu.]
-        \n\n---\n\n
-    -   **HAYIR, DAHA İYİ DEĞİLSE:** O MADDEYİ TAMAMEN ATLA ve HİÇBİR ŞEY YAZMA.
-
-**EN ÖNEMLİ FORMAT KURALLARI:**
-- Çıktın BASİT METİN (plain text) olacak. ASLA HTML etiketleri kullanma.
-- KESİNLİKLE emoji, ikon veya benzeri özel karakterler kullanma.
-- Yaratıcı veya süslü başlıklar KESİNLİKLE YASAKTIR. Sadece \`## Teminat Adı\` formatını kullan.
-
-**ZORUNLU KONTROL LİSTESİ:**
-- İMM
-- Yeni Değer Klozu
-- İkame Araç
-- Anahtar Kaybı
-- Doğal Afetler
-- Mini Onarım
-- Manevi Tazminat
----
-`;
-
-  const noAllianzInstructions = `
-TALİMAT: ALLIANZ TESPİT EDİLMEDİ.
-1.  **GÖREV 1 (\`tableHtml\`):** Poliçelerde yazan İSTİSNASIZ HER DETAYI içeren, %100 EKSİKSİZ bir karşılaştırma tablosu oluştur. ASLA özetleme yapma.
-2.  **GÖREV 2 (\`aiCommentary\`):** Kullanıcının tercihlerini (${preferencesText}) dikkate alarak, her iki poliçenin de güçlü ve zayıf yönlerini özetleyen dengeli ve tarafsız bir analiz yap. Yorumunda ASLA HTML etiketleri kullanma.
-`;
-
-  const finalInstructions = allianzPolicyIndex !== -1 ? allianzInstructions : noAllianzInstructions;
-
-  return `${baseInstructions}${finalInstructions}\n\nKullanıcının tercihleri şunlar:\n${preferencesText}\n\nAnalizini aşağıdaki poliçe metinlerine göre yap:${policyBlocks}`;
-}
 
 module.exports = handler;
 module.exports.config = {
